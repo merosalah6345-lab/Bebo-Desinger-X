@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bebo Designer X - Order Your Design</title>
+<style>
+body { font-family: Arial, sans-serif; background-color: #f8f9fa; margin:0; padding:0; }
+header { background-color: #4a90e2; color:white; text-align:center; padding:20px 0; }
+header h1 { margin:0; }
+main { max-width:900px; margin:30px auto; padding:0 20px; }
+section { background:white; padding:20px; margin-bottom:20px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+label { display:block; margin:10px 0 5px; font-weight:bold; }
+input[type="text"], input[type="number"], textarea, select, input[type="file"] {
+    width:100%; padding:10px; border-radius:5px; border:1px solid #ccc; margin-bottom:10px;
+}
+button { background-color:#4a90e2; color:white; padding:15px 20px; border:none; border-radius:8px; cursor:pointer; font-size:16px; }
+button:hover { background-color:#357ab8; }
+h2 { color:#333; }
+.portfolio img { max-width:100%; border-radius:10px; margin-bottom:10px; }
+.small-note { font-size:12px; color:#666; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>Bebo Designer X</h1>
+    <p>Your university work, designs, posters, brochures & more!</p>
+</header>
+
+<main>
+<section>
+<h2>Place Your Order</h2>
+<form id="orderForm">
+<label for="service">Select Service:</label>
+<select id="service" name="service" required>
+<option value="">--Choose Service--</option>
+<option value="PowerPoint">PowerPoint</option>
+<option value="Poster">Poster</option>
+<option value="Word">Word Document</option>
+<option value="Research">Research</option>
+<option value="Brochure">Brochure</option>
+<option value="Design">Other Design</option>
+</select>
+
+<label for="pages">Number of Pages/Slides:</label>
+<input type="number" id="pages" name="pages" placeholder="e.g., 10" min="1" required>
+
+<label for="language">Language:</label>
+<select id="language" name="language" required>
+<option value="">--Choose Language--</option>
+<option value="English">English</option>
+<option value="Arabic">Arabic</option>
+</select>
+
+<label for="topic">Topic / Title:</label>
+<input type="text" id="topic" name="topic" placeholder="Enter your topic" required>
+
+<label for="details">Details / Instructions:</label>
+<textarea id="details" name="details" placeholder="Provide all necessary details..." rows="5" required></textarea>
+
+<label for="phone">Your Contact Number:</label>
+<input type="text" id="phone" name="phone" placeholder="e.g., +201234567890" required>
+
+<label for="files">Upload Images or Videos (multiple allowed, max 10 files, 10MB each):</label>
+<input type="file" id="files" name="files" accept="image/*,video/*" multiple>
+
+<button type="submit" id="submitBtn">Submit Order</button>
+<p class="small-note" id="status"></p>
+</form>
+</section>
+
+<section class="portfolio">
+<h2>My Works</h2>
+<p>Check out some of my previous works:</p>
+<img src="https://via.placeholder.com/800x450?text=PowerPoint+Design" alt="PowerPoint Work">
+<img src="https://via.placeholder.com/800x450?text=Poster+Design" alt="Poster Work">
+<img src="https://via.placeholder.com/800x450?text=Word+Document+Work" alt="Word Document Work">
+<img src="https://via.placeholder.com/800x450?text=Research+Work" alt="Research Work">
+</section>
+</main>
+
+<script>
+const orderForm = document.getElementById('orderForm');
+const submitBtn = document.getElementById('submitBtn');
+const statusP = document.getElementById('status');
+
+orderForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    submitBtn.disabled = true;
+    statusP.textContent = 'Uploading your order...';
+
+    const formData = new FormData();
+    formData.append('service', document.getElementById('service').value);
+    formData.append('pages', document.getElementById('pages').value);
+    formData.append('language', document.getElementById('language').value);
+    formData.append('topic', document.getElementById('topic').value);
+    formData.append('details', document.getElementById('details').value);
+    formData.append('phone', document.getElementById('phone').value);
+
+    const files = document.getElementById('files').files;
+    if(files.length > 10){
+        alert('Maximum 10 files allowed');
+        submitBtn.disabled = false;
+        statusP.textContent = '';
+        return;
+    }
+    for(let i=0;i<files.length;i++){
+        if(files[i].size > 10 * 1024 * 1024){
+            alert('Each file must be <= 10MB');
+            submitBtn.disabled = false;
+            statusP.textContent = '';
+            return;
+        }
+        formData.append('files', files[i]);
+    }
+
+    try{
+        const resp = await fetch('/api/orders', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await resp.json();
+        if(data && data.success){
+            statusP.textContent = 'Order uploaded. Preparing WhatsApp...';
+            const whatsappNumber = '201144486743';
+            const pdfLink = data.pdfUrl;
+            const topic = encodeURIComponent(document.getElementById('topic').value || 'New Order');
+            const phone = encodeURIComponent(document.getElementById('phone').value || '');
+            const waMessage = encodeURIComponent(`New order: ${topic}%0AContact: ${phone}%0APDF: ${pdfLink}`);
+            const waLink = `https://wa.me/${whatsappNumber}?text=${waMessage}`;
+            window.open(waLink,'_blank','noopener');
+            statusP.innerHTML = `Order sent. <a href="${pdfLink}" target="_blank">Open PDF</a>`;
+        } else {
+            throw new Error((data && data.error) || 'Upload failed');
+        }
+    } catch(err){
+        console.error(err);
+        alert('Failed to submit order: ' + err.message);
+        statusP.textContent = '';
+    } finally{
+        submitBtn.disabled = false;
+    }
+});
+</script>
+
+</body>
+</html>
